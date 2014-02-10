@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-import os, cPickle, ctypes, shutil
+import os, pickle, ctypes, shutil
 from aqt.qt import *
 from anki.utils import isMac, isWin
-from anki import Collection
+from anki.storage import Collection
 from anki.importing import Anki1Importer
 from aqt.utils import showWarning
 import aqt
+from aqt import ngettext, gettext as _
 
 class Upgrader(object):
 
@@ -51,7 +52,7 @@ to import your decks from previous Anki versions."""))
         return os.path.expanduser(p)
 
     def _loadConf(self, path):
-        self.conf = cPickle.load(open(path))
+        self.conf = pickle.load(open(path))
 
     def _copySettings(self):
         p = self.mw.pm.profile
@@ -183,7 +184,7 @@ carefully, as a lot has changed since the previous Anki version."""))
                 if not prog:
                     self.timer.stop()
                     upgrader.log = self.thread.log
-                    upgrader.wizard.next()
+                    next(upgrader.wizard)
                 self.label.setText(prog)
         return UpgradePage()
 
@@ -258,12 +259,12 @@ class UpgradeThread(QThread):
         # try to copy over dropbox media first
         try:
             self.maybeCopyFromCustomFolder(path)
-        except Exception, e:
+        except Exception as e:
             imp.log.append(repr(str(e)))
         # then run the import
         try:
             imp.run()
-        except Exception, e:
+        except Exception as e:
             if repr(str(e)) == "invalidFile":
                 # already logged
                 pass

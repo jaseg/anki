@@ -39,10 +39,10 @@ def test_meta():
         # if the key is wrong, meta returns nothing
         ts.server.hkey = "abc"
         assert not ts.server.meta()
-    except Exception, e:
+    except Exception as e:
         if e.errno == 61:
             TEST_REMOTE = False
-            print "aborting; server offline"
+            print("aborting; server offline")
             return
     ts.server.hkey = TEST_HKEY
     meta = ts.server.meta()
@@ -104,7 +104,7 @@ def setup_remoteMedia():
 def test_media():
     if not TEST_REMOTE:
         return
-    print "media test disabled"
+    print("media test disabled")
     return
     ts.server.mediatest("reset")
     assert len(os.listdir(ts.deck1.media.dir())) == 0

@@ -6,6 +6,7 @@ import cgi
 
 from anki.lang import _
 from aqt.qt import *
+from aqt import ngettext, gettext as _
 from aqt.utils import showText, showWarning
 
 class ErrorHandler(QObject):
@@ -22,8 +23,8 @@ class ErrorHandler(QObject):
 
     def write(self, data):
         # make sure we have unicode
-        if not isinstance(data, unicode):
-            data = unicode(data, "utf8", "replace")
+        if not isinstance(data, str):
+            data = str(data, "utf8", "replace")
         # dump to stdout
         sys.stdout.write(data.encode("utf-8"))
         # save in buffer

@@ -4,6 +4,7 @@
 
 from aqt.qt import *
 import aqt
+from aqt import ngettext, gettext as _
 from aqt.utils import  showWarning, openHelp, askUser
 
 class DeckConf(QDialog):
@@ -36,7 +37,7 @@ class DeckConf(QDialog):
 
     def setupOrder(self):
         import anki.consts as cs
-        self.form.order.addItems(cs.dynOrderLabels().values())
+        self.form.order.addItems(list(cs.dynOrderLabels().values()))
 
     def loadConf(self):
         f = self.form
@@ -92,7 +93,7 @@ it?""")):
         return " ".join([str(x) for x in l])
 
     def userToList(self, w, minSize=1):
-        items = unicode(w.text()).split(" ")
+        items = str(w.text()).split(" ")
         ret = []
         for i in items:
             if not i:

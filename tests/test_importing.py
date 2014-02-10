@@ -35,7 +35,7 @@ def test_anki2():
         assert dst.noteCount() == srcNotes
         assert dst.cardCount() == srcCards
         assert srcRev == dst.db.scalar("select count() from revlog")
-        mids = [int(x) for x in dst.models.models.keys()]
+        mids = [int(x) for x in list(dst.models.models.keys())]
         assert not dst.db.scalar(
             "select count() from notes where mid not in "+ids2str(mids))
         assert not dst.db.scalar(
@@ -96,7 +96,7 @@ def test_anki2_mediadupes():
 
 def test_apkg():
     tmp = getEmptyDeck()
-    apkg = unicode(os.path.join(testDir, "support/media.apkg"))
+    apkg = str(os.path.join(testDir, "support/media.apkg"))
     imp = AnkiPackageImporter(tmp, apkg)
     assert os.listdir(tmp.media.dir()) == []
     imp.run()
@@ -233,7 +233,7 @@ def test_anki2_updates():
 
 def test_csv():
     deck = getEmptyDeck()
-    file = unicode(os.path.join(testDir, "support/text-2fields.txt"))
+    file = str(os.path.join(testDir, "support/text-2fields.txt"))
     i = TextImporter(deck, file)
     i.initMapping()
     i.run()
@@ -278,7 +278,7 @@ def test_csv2():
     n['Three'] = "3"
     deck.addNote(n)
     # an update with unmapped fields should not clobber those fields
-    file = unicode(os.path.join(testDir, "support/text-update.txt"))
+    file = str(os.path.join(testDir, "support/text-update.txt"))
     i = TextImporter(deck, file)
     i.initMapping()
     i.run()
@@ -290,7 +290,7 @@ def test_csv2():
 
 def test_supermemo_xml_01_unicode():
     deck = getEmptyDeck()
-    file = unicode(os.path.join(testDir, "support/supermemo1.xml"))
+    file = str(os.path.join(testDir, "support/supermemo1.xml"))
     i = SupermemoXmlImporter(deck, file)
     #i.META.logToStdOutput = True
     i.run()
@@ -303,7 +303,7 @@ def test_supermemo_xml_01_unicode():
 
 def test_mnemo():
     deck = getEmptyDeck()
-    file = unicode(os.path.join(testDir, "support/mnemo.db"))
+    file = str(os.path.join(testDir, "support/mnemo.db"))
     i = MnemosyneImporter(deck, file)
     i.run()
     assert deck.cardCount() == 7

@@ -4,7 +4,8 @@
 from anki.lang import _
 
 from aqt.qt import *
-import re, os, urllib2, ctypes
+from aqt import ngettext, gettext as _
+import re, os, urllib.request, urllib.error, urllib.parse, ctypes
 from anki.utils import stripHTML, isWin, isMac, namedtmp, json, stripHTMLMedia
 import anki.sound
 from anki.hooks import runHook, runFilter
@@ -14,8 +15,8 @@ from aqt.utils import shortcut, showInfo, showWarning, getBase, getFile, \
     openHelp, tooltip
 import aqt
 import anki.js
-from BeautifulSoup import BeautifulSoup
-import urllib
+import bs4
+import urllib.request, urllib.parse, urllib.error
 
 pics = ("jpg", "jpeg", "png", "tif", "tiff", "gif", "svg")
 audio =  ("wav", "mp3", "ogg", "flac", "mp4", "swf", "mov", "mpeg", "mkv")
@@ -372,7 +373,7 @@ class Editor(object):
         but.setToolTip(_("Set foreground colour (F7)"))
         self.setupForegroundButton(but)
         but = b("change_colour", self.onChangeCol, _("F8"),
-          _("Change colour (F8)"), text=u"▾")
+          _("Change colour (F8)"), text="▾")
         but.setFixedWidth(12)
         but = b("cloze", self.onCloze, _("Ctrl+Shift+C"),
                 _("Cloze deletion (Ctrl+Shift+C)"), text="[...]")
@@ -384,7 +385,7 @@ class Editor(object):
         b("mail-attachment", self.onAddMedia, _("F3"),
           _("Attach pictures/audio/video (F3)"))
         b("media-record", self.onRecSound, _("F5"), _("Record audio (F5)"))
-        b("adv", self.onAdvanced, text=u"▾")
+        b("adv", self.onAdvanced, text="▾")
         s = QShortcut(QKeySequence("Ctrl+T, T"), self.widget)
         s.connect(s, SIGNAL("activated()"), self.insertLatex)
         s = QShortcut(QKeySequence("Ctrl+T, E"), self.widget)
@@ -399,7 +400,7 @@ class Editor(object):
         runHook("setupEditorButtons", self)
 
     def enableButtons(self, val=True):
-        for b in self._buttons.values():
+        for b in list(self._buttons.values()):
             b.setEnabled(val)
 
     def disableButtons(self):
@@ -442,7 +443,7 @@ class Editor(object):
             # misbehaving apps may include a null byte in the text
             txt = txt.replace("\x00", "")
             # reverse the url quoting we added to get images to display
-            txt = unicode(urllib2.unquote(
+            txt = str(urllib.parse.unquote(
                 txt.encode("utf8")), "utf8", "replace")
             self.note.fields[self.currentField] = txt
             if not self.addMode:
@@ -482,7 +483,7 @@ class Editor(object):
         elif str.startswith("dupes"):
             self.showDupes()
         else:
-            print str
+            print(str)
 
     def mungeHTML(self, txt):
         if txt == "<br>":
@@ -527,7 +528,7 @@ class Editor(object):
             # will be loaded when page is ready
             return
         data = []
-        for fld, val in self.note.items():
+        for fld, val in list(self.note.items()):
             data.append((fld, self.mw.col.media.escapeImages(val)))
         self.web.eval("setFields(%s, %d);" % (
             json.dumps(data), field))
@@ -605,7 +606,7 @@ class Editor(object):
         html = form.textEdit.toPlainText()
         # filter html through beautifulsoup so we can strip out things like a
         # leading </div>
-        html = unicode(BeautifulSoup(html))
+        html = str(bs4.BeautifulSoup(html))
         self.note.fields[self.currentField] = html
         self.loadNote()
         # focus field so it's saved
@@ -693,7 +694,7 @@ to a cloze type first, via Edit>Change Note Type."""))
                 return
         # find the highest existing cloze
         highest = 0
-        for name, val in self.note.items():
+        for name, val in list(self.note.items()):
             m = re.findall("\{\{c(\d+)::", val)
             if m:
                 highest = max(highest, sorted([int(x) for x in m])[-1])
@@ -776,7 +777,7 @@ to a cloze type first, via Edit>Change Note Type."""))
     def onRecSound(self):
         try:
             file = getAudio(self.widget)
-        except Exception, e:
+        except Exception as e:
             showWarning(_(
                 "Couldn't record audio. Have you installed lame and sox?") +
                         "\n\n" + repr(str(e)))
@@ -795,7 +796,7 @@ to a cloze type first, via Edit>Change Note Type."""))
     def fnameToLink(self, fname):
         ext = fname.split(".")[-1].lower()
         if ext in pics:
-            name = urllib.quote(fname.encode("utf8"))
+            name = urllib.parse.quote(fname.encode("utf8"))
             return '<img src="%s">' % name
         else:
             anki.sound.play(fname)
@@ -828,22 +829,22 @@ to a cloze type first, via Edit>Change Note Type."""))
         self.mw.progress.start(
             immediate=True, parent=self.parentWindow)
         try:
-            req = urllib2.Request(url, None, {
+            req = urllib.request.Request(url, None, {
                 'User-Agent': 'Mozilla/5.0 (compatible; Anki)'})
-            filecontents = urllib2.urlopen(req).read()
-        except urllib2.URLError, e:
+            filecontents = urllib.request.urlopen(req).read()
+        except urllib.error.URLError as e:
             showWarning(_("An error occurred while opening %s") % e)
             return
         finally:
             self.mw.progress.finish()
-        path = unicode(urllib2.unquote(url.encode("utf8")), "utf8")
+        path = str(urllib.parse.unquote(url.encode("utf8")), "utf8")
         return self.mw.col.media.writeData(path, filecontents)
 
     # HTML filtering
     ######################################################################
 
     def _filterHTML(self, html, localize=False):
-        doc = BeautifulSoup(html)
+        doc = bs4.BeautifulSoup(html)
         # remove implicit regular font style from outermost element
         if doc.span:
             try:
@@ -910,7 +911,7 @@ to a cloze type first, via Edit>Change Note Type."""))
         for elem in "html", "head", "body", "meta":
             for tag in doc(elem):
                 tag.replaceWithChildren()
-        html = unicode(doc)
+        html = str(doc)
         return html
 
     # Advanced menu
@@ -1120,7 +1121,7 @@ class EditorWebView(AnkiWebView):
     # be URL-encoded, and shouldn't be a file:// url unless they're browsing
     # locally, which we don't support
     def _processText(self, mime):
-        txt = unicode(mime.text())
+        txt = str(mime.text())
         html = None
         # if the user is pasting an image or sound link, convert it to local
         if self.editor.isURL(txt):

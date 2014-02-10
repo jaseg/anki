@@ -6,6 +6,7 @@ from aqt.qt import *
 import os, time
 from aqt.utils import saveGeom, restoreGeom, maybeHideClose, showInfo, addCloseShortcut
 import aqt
+from aqt import ngettext, gettext as _
 
 # Deck Stats
 ######################################################################

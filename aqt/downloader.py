@@ -4,10 +4,11 @@
 
 import time, re, traceback
 from aqt.qt import *
-from anki.sync import httpCon
+from aqt import ngettext, gettext as _
 from aqt.utils import showWarning
 from anki.hooks import addHook, remHook
-import aqt.sync # monkey-patches httplib2
+import aqt.sync # monkey-patches httplib2 FIXME
+import requests
 
 def download(mw, code):
     "Download addon/deck from AnkiWeb. On success caller must stop progress diag."
@@ -61,21 +62,16 @@ class Downloader(QThread):
             if canPost():
                 self.emit(SIGNAL("recv"))
         addHook("httpRecv", recvEvent)
-        con =  httpCon()
         try:
-            resp, cont = con.request(
-                aqt.appShared + "download/%d" % self.code)
-        except Exception, e:
-            exc = traceback.format_exc()
-            try:
-                self.error = unicode(e[0], "utf8", "ignore")
-            except:
-                self.error = unicode(exc, "utf8", "ignore")
+            res = requests.get(aqt.appShared + "download/%d" % self.code)
+        except: #FIXME
+            self.error = traceback.format_exc()
             return
         finally:
             remHook("httpRecv", recvEvent)
         if resp['status'] == '200':
             self.error = None
+            #FIXME
             self.fname = re.match("attachment; filename=(.+)",
                                   resp['content-disposition']).group(1)
             self.data = cont

@@ -9,6 +9,7 @@ import re
 from operator import  itemgetter
 from anki.lang import ngettext
 
+from aqt import ngettext, gettext as _
 from aqt.qt import *
 import anki
 import aqt.forms
@@ -274,10 +275,10 @@ class DataModel(QAbstractTableModel):
         return a
 
     def formatQA(self, txt):
-        s = txt.replace("<br>", u" ")
-        s = s.replace("<br />", u" ")
-        s = s.replace("<div>", u" ")
-        s = s.replace("\n", u" ")
+        s = txt.replace("<br>", " ")
+        s = s.replace("<br />", " ")
+        s = s.replace("<div>", " ")
+        s = s.replace("\n", " ")
         s = re.sub("\[sound:[^]]+\]", "", s)
         s = re.sub("\[\[type:[^]]+\]\]", "", s)
         s = stripHTMLMedia(s)
@@ -512,7 +513,7 @@ class Browser(QMainWindow):
 
     def onSearch(self, reset=True):
         "Careful: if reset is true, the current note is saved."
-        txt = unicode(self.form.searchEdit.lineEdit().text()).strip()
+        txt = str(self.form.searchEdit.lineEdit().text()).strip()
         prompt = _("<type here to search; hit enter to show current deck>")
         sh = self.mw.pm.profile['searchHistory']
         # update search history
@@ -771,11 +772,11 @@ by clicking on one on the left."""))
         if self.mw.app.keyboardModifiers() & Qt.AltModifier:
             txt = "-"+txt
         if self.mw.app.keyboardModifiers() & Qt.ControlModifier:
-            cur = unicode(self.form.searchEdit.lineEdit().text())
+            cur = str(self.form.searchEdit.lineEdit().text())
             if cur:
                 txt = cur + " " + txt
         elif self.mw.app.keyboardModifiers() & Qt.ShiftModifier:
-            cur = unicode(self.form.searchEdit.lineEdit().text())
+            cur = str(self.form.searchEdit.lineEdit().text())
             if cur:
                 txt = cur + " or " + txt
         self.form.searchEdit.lineEdit().setText(txt)
@@ -1298,8 +1299,8 @@ update cards set usn=?, mod=?, did=? where id in """ + scids,
         self.model.beginReset()
         try:
             changed = self.col.findReplace(sf,
-                                            unicode(frm.find.text()),
-                                            unicode(frm.replace.text()),
+                                            str(frm.find.text()),
+                                            str(frm.replace.text()),
                                             frm.re.isChecked(),
                                             field,
                                             frm.ignoreCase.isChecked())
@@ -1612,7 +1613,7 @@ class ChangeModel(QDialog):
         # check maps
         fmap = self.getFieldMap()
         cmap = self.getTemplateMap()
-        if any(True for c in cmap.values() if c is None):
+        if any(True for c in list(cmap.values()) if c is None):
             if not askUser(_("""\
 Any cards mapped to nothing will be deleted. \
 If a note has no remaining cards, it will be lost. \

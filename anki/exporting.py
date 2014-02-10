@@ -133,7 +133,7 @@ class AnkiExporter(Exporter):
             "insert into cards values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             data)
         # notes
-        strnids = ids2str(nids.keys())
+        strnids = ids2str(list(nids.keys()))
         notedata = self.src.db.all("select * from notes where id in "+
                                strnids)
         self.dst.db.executemany(
@@ -194,7 +194,7 @@ class AnkiExporter(Exporter):
                 for fname in os.listdir(self.mediaDir):
                     if fname.startswith("_"):
                         media[fname] = True
-        self.mediaFiles = media.keys()
+        self.mediaFiles = list(media.keys())
         self.dst.crt = self.src.crt
         # todo: tags?
         self.count = self.dst.cardCount()

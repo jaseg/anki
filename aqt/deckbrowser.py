@@ -9,6 +9,7 @@ from anki.utils import isMac, ids2str, fmtTimeSpan
 import anki.js
 from anki.errors import DeckRenameError
 import aqt
+from aqt import ngettext, gettext as _
 from anki.sound import clearAudioQueue
 
 class DeckBrowser(object):
@@ -62,7 +63,7 @@ class DeckBrowser(object):
 
     def _keyHandler(self, evt):
         # currently does nothing
-        key = unicode(evt.text())
+        key = str(evt.text())
 
     def _selDeck(self, did):
         self.mw.col.decks.select(did)
@@ -280,7 +281,7 @@ where id > ?""", (self.mw.col.sched.dayCutoff-86400)*1000)
             return
         try:
             self.mw.col.decks.rename(deck, newName)
-        except DeckRenameError, e:
+        except DeckRenameError as e:
             return showWarning(e.description)
         self.show()
 
@@ -297,7 +298,7 @@ where id > ?""", (self.mw.col.sched.dayCutoff-86400)*1000)
     def _dragDeckOnto(self, draggedDeckDid, ontoDeckDid):
         try:
             self.mw.col.decks.renameForDragAndDrop(draggedDeckDid, ontoDeckDid)
-        except DeckRenameError, e:
+        except DeckRenameError as e:
             return showWarning(e.description)
 
         self.show()

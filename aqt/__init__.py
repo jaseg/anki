@@ -3,36 +3,37 @@
 import getpass
 import os
 import sys
-import optparse
+import argparse
 import tempfile
-import __builtin__
 import locale
-import gettext
+import gettext as gettext_mod
+
+from anki.lang import langDir
+
+translation = gettext_mod.translation('anki', langDir(), fallback=True)
+ngettext, gettext = translation.ngettext, translation.gettext
 
 from aqt.qt import *
 import anki.lang
 from anki.consts import HELP_SITE
-from anki.lang import langDir
 from anki.utils import isMac
 from anki import version as _version
 
-appVersion=_version
-appWebsite="http://ankisrs.net/"
-appChanges="http://ankisrs.net/docs/changes.html"
-appDonate="http://ankisrs.net/support/"
-appShared="https://ankiweb.net/shared/"
-appUpdate="https://ankiweb.net/update/desktop"
-appHelpSite=HELP_SITE
+ANKI_VERSION=_version
+ANKI_WEBSITE="http://ankisrs.net/"
+ANKI_CHANGES="http://ankisrs.net/docs/changes.html"
+ANKI_DONATE="http://ankisrs.net/support/"
+ANKI_SHARED="https://ankiweb.net/shared/"
+ANKI_UPDATE="https://ankiweb.net/update/desktop"
 mw = None # set on init
 
 moduleDir = os.path.split(os.path.dirname(os.path.abspath(__file__)))[0]
 
 try:
     import aqt.forms
-except ImportError, e:
+except ImportError as e:
     if "forms" in str(e):
-        print "If you're running from git, did you run build_ui.sh?"
-        print
+        print("If you're running from git, did you run build_ui.sh?\n")
     raise
 
 from anki.utils import checksum
@@ -67,7 +68,7 @@ class DialogManager(object):
 
     def closeAll(self):
         "True if all closed successfully."
-        for (n, (creator, instance)) in self._dialogs.items():
+        for (n, (creator, instance)) in list(self._dialogs.items()):
             if instance:
                 if not instance.canClose():
                     return False
@@ -84,11 +85,7 @@ dialogs = DialogManager()
 # loaded, and we need the Qt language to match the gettext language or
 # translated shortcuts will not work.
 
-_gtrans = None
-_qtrans = None
-
 def setupLang(pm, app, force=None):
-    global _gtrans, _qtrans
     try:
         locale.setlocale(locale.LC_ALL, '')
     except:
@@ -96,10 +93,9 @@ def setupLang(pm, app, force=None):
     lang = force or pm.meta["defaultLang"]
     dir = langDir()
     # gettext
-    _gtrans = gettext.translation(
-        'anki', dir, languages=[lang], fallback=True)
-    __builtin__.__dict__['_'] = _gtrans.ugettext
-    __builtin__.__dict__['ngettext'] = _gtrans.ungettext
+    translation = gettext_mod.translation('anki', dir, languages=[lang], fallback=True)
+    translation.install()
+    # qt
     anki.lang.setLang(lang, local=False)
     if lang in ("he","ar","fa"):
         app.setLayoutDirection(Qt.RightToLeft)
@@ -119,21 +115,20 @@ class AnkiApp(QApplication):
     ##################################################
 
     KEY = "anki"+checksum(getpass.getuser())
-    TMOUT = 5000
+    SOCKET_TIMEOUT = 5000
 
     def __init__(self, argv):
         QApplication.__init__(self, argv)
         self._argv = argv
 
-    def secondInstance(self):
+    def checkForRunningInstances(self, args):
         # we accept only one command line argument. if it's missing, send
         # a blank screen to just raise the existing window
-        opts, args = parseArgs(self._argv)
-        buf = "raise"
-        if args and args[0]:
-            buf = os.path.abspath(args[0])
-        if self.sendMsg(buf):
-            print "Already running; reusing existing instance."
+        cmd = 'raise'
+        if args.file:
+            cmd = 'open '+os.path.abspath(args.file.name)
+        if self.sendMsg(cmd):
+            print("Already running; reusing existing instance.")
             return True
         else:
             # send failed, so we're the first instance or the
@@ -145,24 +140,24 @@ class AnkiApp(QApplication):
             return False
 
     def sendMsg(self, txt):
+        #FIXME are these transferring strings or bytes?
         sock = QLocalSocket(self)
         sock.connectToServer(self.KEY, QIODevice.WriteOnly)
-        if not sock.waitForConnected(self.TMOUT):
+        if not sock.waitForConnected(self.SOCKET_TIMEOUT):
             # first instance or previous instance dead
             return False
         sock.write(txt)
-        if not sock.waitForBytesWritten(self.TMOUT):
+        if not sock.waitForBytesWritten(self.SOCKET_TIMEOUT):
             raise Exception("existing instance not emptying")
         sock.disconnectFromServer()
         return True
 
     def onRecv(self):
         sock = self._srv.nextPendingConnection()
-        if not sock.waitForReadyRead(self.TMOUT):
+        if not sock.waitForReadyRead(self.SOCKET_TIMEOUT):
             sys.stderr.write(sock.errorString())
             return
         buf = sock.readAll()
-        buf = unicode(buf, sys.getfilesystemencoding(), "ignore")
         self.emit(SIGNAL("appMsg"), buf)
         sock.disconnectFromServer()
 
@@ -171,30 +166,37 @@ class AnkiApp(QApplication):
 
     def event(self, evt):
         if evt.type() == QEvent.FileOpen:
-            self.emit(SIGNAL("appMsg"), evt.file() or "raise")
+            self.emit(SIGNAL("appMsg"), "open "+evt.file() or "raise")
             return True
         return QApplication.event(self, evt)
 
 def parseArgs(argv):
-    "Returns (opts, args)."
     # py2app fails to strip this in some instances, then anki dies
     # as there's no such profile
     if isMac and len(argv) > 1 and argv[1].startswith("-psn"):
         argv = [argv[0]]
-    parser = optparse.OptionParser(version="%prog " + appVersion)
-    parser.usage = "%prog [OPTIONS] [file to import]"
-    parser.add_option("-b", "--base", help="path to base folder")
-    parser.add_option("-p", "--profile", help="profile name to load")
-    parser.add_option("-l", "--lang", help="interface language (en, de, etc)")
-    return parser.parse_args(argv[1:])
+    parser = argparse.ArgumentParser()
+
+    def readable_dir(prospective_dir):
+        if not os.path.isdir(prospective_dir):
+            raise Exception("readable_dir:{0} is not a valid path".format(prospective_dir))
+        if os.access(prospective_dir, os.R_OK):
+            return prospective_dir
+        else:
+            raise Exception("readable_dir:{0} is not a readable dir".format(prospective_dir))
+
+    parser.add_argument("-b", "--base", type=readable_dir, help="path to base folder")
+    parser.add_argument("-p", "--profile", help="profile name to load")
+    parser.add_argument("-l", "--lang", help="interface language (en, de, etc)")
+    parser.add_argument("-v", "--version", action="version", version="%(prog)s " + ANKI_VERSION)
+    parser.add_argument("file", nargs="?", type=argparse.FileType('r'), help="File to open")
+    return parser.parse_args(argv)
 
 def run():
     global mw
 
     # parse args
-    opts, args = parseArgs(sys.argv)
-    opts.base = unicode(opts.base or "", sys.getfilesystemencoding())
-    opts.profile = unicode(opts.profile or "", sys.getfilesystemencoding())
+    args = parseArgs(sys.argv)
 
     # on osx we'll need to add the qt plugins to the search path
     if isMac and getattr(sys, 'frozen', None):
@@ -207,7 +209,7 @@ def run():
     # create the app
     app = AnkiApp(sys.argv)
     QCoreApplication.setApplicationName("Anki")
-    if app.secondInstance():
+    if app.checkForRunningInstances(args):
         # we've signaled the primary instance, so we should close
         return
 
@@ -234,10 +236,10 @@ environment points to a valid, writable folder.""")
 
     # profile manager
     from aqt.profiles import ProfileManager
-    pm = ProfileManager(opts.base, opts.profile)
+    pm = ProfileManager(args.base, args.profile)
 
     # i18n
-    setupLang(pm, app, opts.lang)
+    setupLang(pm, app, args.lang)
 
     # remaining pm init
     pm.ensureProfile()

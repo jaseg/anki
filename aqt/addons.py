@@ -3,13 +3,14 @@
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
 import sys, os, traceback
-from cStringIO import StringIO
+from io import StringIO
 from aqt.qt import *
 from aqt.utils import showInfo, openFolder, isWin, openLink, \
     askUser
 from zipfile import ZipFile
 import aqt.forms
 import aqt
+from aqt import ngettext, gettext as _
 from aqt.downloader import download
 
 # in the future, it would be nice to save the addon id and unzippped file list
@@ -71,7 +72,7 @@ class AddonManager(object):
         frm = aqt.forms.editaddon.Ui_Dialog()
         frm.setupUi(d)
         d.setWindowTitle(os.path.basename(path))
-        frm.text.setPlainText(unicode(open(path).read(), "utf8"))
+        frm.text.setPlainText(str(open(path).read(), "utf8"))
         d.connect(frm.buttonBox, SIGNAL("accepted()"),
                   lambda: self.onAcceptEdit(path, frm))
         d.exec_()

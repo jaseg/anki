@@ -2,92 +2,33 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import os
 import sys
 import gzip
 import random
-from cStringIO import StringIO
+from io import StringIO
 
-import httplib2
 from anki.db import DB
 from anki.utils import ids2str, intTime, json, isWin, isMac, platDesc, checksum
 from anki.consts import *
-from hooks import runHook
+from .hooks import runHook
 import anki
+import requests
+from requests.exceptions import HTTPError
 
 # syncing vars
 HTTP_TIMEOUT = 90
 HTTP_PROXY = None
 
-# badly named; means no retries
-httplib2.RETRIES = 1
-
-try:
-    # httplib2 >=0.7.7
-    _proxy_info_from_environment = httplib2.proxy_info_from_environment
-    _proxy_info_from_url = httplib2.proxy_info_from_url
-except AttributeError:
-    # httplib2 <0.7.7
-    _proxy_info_from_environment = httplib2.ProxyInfo.from_environment
-    _proxy_info_from_url = httplib2.ProxyInfo.from_url
-
-# Httplib2 connection object
-######################################################################
-
-def httpCon():
-    certs = os.path.join(os.path.dirname(__file__), "ankiweb.certs")
-    if not os.path.exists(certs):
-        if isWin:
-            certs = os.path.join(
-                os.path.dirname(os.path.abspath(sys.argv[0])),
-                "ankiweb.certs")
-        elif isMac:
-            certs = os.path.join(
-                os.path.dirname(os.path.abspath(sys.argv[0])),
-                "../Resources/ankiweb.certs")
-        else:
-            assert 0, "Your distro has not packaged Anki correctly."
-    return httplib2.Http(
-        timeout=HTTP_TIMEOUT, ca_certs=certs,
-        proxy_info=HTTP_PROXY,
-        disable_ssl_certificate_validation=not not HTTP_PROXY)
-
-# Proxy handling
-######################################################################
-
-def _setupProxy():
-    global HTTP_PROXY
-    # set in env?
-    p = _proxy_info_from_environment()
-    if not p:
-        # platform-specific fetch
-        url = None
-        if isWin:
-            r = urllib.getproxies_registry()
-            if 'https' in r:
-                url = r['https']
-            elif 'http' in r:
-                url = r['http']
-        elif isMac:
-            r = urllib.getproxies_macosx_sysconf()
-            if 'https' in r:
-                url = r['https']
-            elif 'http' in r:
-                url = r['http']
-        if url:
-            p = _proxy_info_from_url(url, _proxyMethod(url))
-    if p:
-        p.proxy_rdns = True
-    HTTP_PROXY = p
-
-def _proxyMethod(url):
-    if url.lower().startswith("https"):
-        return "https"
+CERT_PATH = os.path.join(os.path.dirname(__file__), "ankiweb.certs")
+if not os.path.exists(CERT_PATH):
+    if isWin:
+        CERT_PATH = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "ankiweb.certs")
+    elif isMac:
+        CERT_PATH = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "../Resources/ankiweb.certs")
     else:
-        return "http"
-
-_setupProxy()
+        assert 0, "Your distro has not packaged Anki correctly."
 
 # Incremental syncing
 ##########################################################################
@@ -535,14 +476,9 @@ class LocalServer(Syncer):
 
 class HttpSyncer(object):
 
-    def __init__(self, hkey=None, con=None):
+    def __init__(self, hkey=None):
         self.hkey = hkey
         self.skey = checksum(str(random.random()))[:8]
-        self.con = con or httpCon()
-
-    def assertOk(self, resp):
-        if resp['status'] != '200':
-            raise Exception("Unknown response code: %s" % resp['status'])
 
     # Posting data as a file
     ######################################################################
@@ -550,58 +486,17 @@ class HttpSyncer(object):
     # costly. We could send it as a raw post, but more HTTP clients seem to
     # support file uploading, so this is the more compatible choice.
 
-    def req(self, method, fobj=None, comp=6,
-                 badAuthRaises=True, hkey=True):
-        BOUNDARY="Anki-sync-boundary"
-        bdry = "--"+BOUNDARY
-        buf = StringIO()
-        # compression flag and session key as post vars
-        vars = {}
-        vars['c'] = 1 if comp else 0
+    def req(self, method, fobj=None, comp=6, hkey=True):
+        postdata = {}
+        postdata['c'] = int(bool(comp))
         if hkey:
-            vars['k'] = self.hkey
-            vars['s'] = self.skey
-        for (key, value) in vars.items():
-            buf.write(bdry + "\r\n")
-            buf.write(
-                'Content-Disposition: form-data; name="%s"\r\n\r\n%s\r\n' %
-                (key, value))
-        # payload as raw data or json
+            postdata['k'] = self.hkey
+            postdata['s'] = self.skey
         if fobj:
-            # header
-            buf.write(bdry + "\r\n")
-            buf.write("""\
-Content-Disposition: form-data; name="data"; filename="data"\r\n\
-Content-Type: application/octet-stream\r\n\r\n""")
-            # write file into buffer, optionally compressing
-            if comp:
-                tgt = gzip.GzipFile(mode="wb", fileobj=buf, compresslevel=comp)
-            else:
-                tgt = buf
-            while 1:
-                data = fobj.read(65536)
-                if not data:
-                    if comp:
-                        tgt.close()
-                    break
-                tgt.write(data)
-            buf.write('\r\n' + bdry + '--\r\n')
-        size = buf.tell()
-        # connection headers
-        headers = {
-            'Content-Type': 'multipart/form-data; boundary=%s' % BOUNDARY,
-            'Content-Length': str(size),
-        }
-        body = buf.getvalue()
-        buf.close()
-        resp, cont = self.con.request(
-            SYNC_URL+method, "POST", headers=headers, body=body)
-        if not badAuthRaises:
-            # return false if bad auth instead of raising
-            if resp['status'] == '403':
-                return False
-        self.assertOk(resp)
-        return cont
+            postdata['data'] = gzip.compress(fobj.read()) if comp else fobj
+        r = requests.post(SYNC_URL+method, data=postdata, verify=CERT_PATH)
+        r.raise_for_status();
+        return r
 
 # Incremental sync over HTTP
 ######################################################################
@@ -612,47 +507,42 @@ class RemoteServer(HttpSyncer):
         HttpSyncer.__init__(self, hkey)
 
     def hostKey(self, user, pw):
-        "Returns hkey or none if user/pw incorrect."
-        ret = self.req(
-            "hostKey", StringIO(json.dumps(dict(u=user, p=pw))),
-            badAuthRaises=False, hkey=False)
-        if not ret:
-            # invalid auth
-            return
-        self.hkey = json.loads(ret)['key']
-        return self.hkey
+        "RetURNS HKEY or none if user/pw incorrect."
+        try:
+            res = self.req("hostKey", json.dumps({'u': user, 'p': pw}), hkey=False)
+            self.hkey = res.json()['key']
+            return self.hkey
+        except HTTPError as e:
+            if e.response.status_code == requests.codes.forbidden:
+                return none
+            raise
 
     def meta(self):
-        ret = self.req(
-            "meta", StringIO(json.dumps(dict(
-                v=SYNC_VER, cv="ankidesktop,%s,%s"%(anki.version, platDesc())))),
-            badAuthRaises=False)
-        if not ret:
-            # invalid auth
-            return
-        return json.loads(ret)
+        try:
+            res = self.req("meta", StringIO(json.dumps(dict( v=SYNC_VER, cv="ankidesktop,%s,%s"%(anki.version, platDesc())))))
+            return res.json()
+        except HTTPError as e:
+            if e.response.status_code == requests.codes.forbidden:
+                return None
+            raise
 
-    def applyChanges(self, **kw):
-        return self._run("applyChanges", kw)
+    def applyChanges(self, data):
+        return self.req("applyChanges", json.dumps(data)).json()
 
-    def start(self, **kw):
-        return self._run("start", kw)
+    def start(self, data):
+        return self.req("start", json.dumps(data)).json()
 
-    def chunk(self, **kw):
-        return self._run("chunk", kw)
+    def chunk(self, data):
+        return self.req("chunk", json.dumps(data)).json()
 
-    def applyChunk(self, **kw):
-        return self._run("applyChunk", kw)
+    def applyChunk(self, data):
+        return self.req("applyChunk", json.dumps(data)).json()
 
-    def sanityCheck2(self, **kw):
-        return self._run("sanityCheck2", kw)
+    def sanityCheck2(self, data):
+        return self.req("sanityCheck2", json.dumps(data)).json()
 
-    def finish(self, **kw):
-        return self._run("finish", kw)
-
-    def _run(self, cmd, data):
-        return json.loads(
-            self.req(cmd, StringIO(json.dumps(data))))
+    def finish(self, data):
+        return self.req("finish", json.dumps(data)).json()
 
 # Full syncing
 ##########################################################################
@@ -666,12 +556,12 @@ class FullSyncer(HttpSyncer):
     def download(self):
         runHook("sync", "download")
         self.col.close()
-        cont = self.req("download")
+        res = self.req("download")
         tpath = self.col.path + ".tmp"
-        if cont == "upgradeRequired":
+        if res.text == "upgradeRequired":
             runHook("sync", "upgradeRequired")
             return
-        open(tpath, "wb").write(cont)
+        open(tpath, "wb").write(res.text)
         # check the received file is ok
         d = DB(tpath)
         assert d.scalar("pragma integrity_check") == "ok"
@@ -691,7 +581,7 @@ class FullSyncer(HttpSyncer):
             return False
         # apply some adjustments, then upload
         self.col.beforeUpload()
-        if self.req("upload", open(self.col.path, "rb")) != "OK":
+        if self.req("upload", open(self.col.path, "rb")).text != "OK":
             return False
         return True
 
@@ -732,18 +622,18 @@ class MediaSyncer(object):
         while 1:
             runHook("sync", "streamMedia")
             usn = self.col.media.usn()
-            zip = self.server.files(minUsn=usn, need=need)
-            if self.addFiles(zip=zip):
+            zipf = self.server.files(minUsn=usn, need=need)
+            if self.addFiles(zipf):
                 break
         # step 4: stream files to the server
         runHook("sync", "client")
         while 1:
             runHook("sync", "streamMedia")
-            zip, fnames = self.files()
+            zipf, fnames = self.files()
             if not fnames:
                 # finished
                 break
-            usn = self.server.addFiles(zip=zip)
+            usn = self.server.addFiles(zipf)
             # after server has replied, safe to remove from log
             self.col.media.forgetAdded(fnames)
             self.col.media.setUsn(usn)
@@ -769,9 +659,9 @@ class MediaSyncer(object):
     def files(self):
         return self.col.media.zipAdded()
 
-    def addFiles(self, zip):
-        "True if zip is the last in set. Server returns new usn instead."
-        return self.col.media.syncAdd(zip)
+    def addFiles(self, zipf):
+        "True if zipf is the last in set. Server returns new usn instead."
+        return self.col.media.syncAdd(zipf)
 
     def mediaSanity(self):
         return self.col.media.sanityCheck()
@@ -785,27 +675,21 @@ class RemoteMediaServer(HttpSyncer):
         HttpSyncer.__init__(self, hkey, con)
 
     def remove(self, **kw):
-        return json.loads(
-            self.req("remove", StringIO(json.dumps(kw))))
+        return self.req("remove", json.dumps(kw)).json()
 
     def files(self, **kw):
-        return self.req("files", StringIO(json.dumps(kw)))
+        return self.req("files", json.dumps(kw))
 
-    def addFiles(self, zip):
+    def addFiles(self, zipf):
         # no compression, as we compress the zip file instead
-        return json.loads(
-            self.req("addFiles", StringIO(zip), comp=0))
+        return self.req("addFiles", zipf, comp=0).json()
 
     def mediaSanity(self):
-        return json.loads(
-            self.req("mediaSanity"))
+        return self.req("mediaSanity").json()
 
     def mediaList(self):
-        return json.loads(
-            self.req("mediaList"))
+        return self.req("mediaList").json()
 
     # only for unit tests
     def mediatest(self, n):
-        return json.loads(
-            self.req("mediatest", StringIO(
-                json.dumps(dict(n=n)))))
+        return self.req("mediatest", json.dumps({'n': n})).json()

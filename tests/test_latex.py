@@ -11,7 +11,7 @@ def test_latex():
     anki.latex.latexCmd[0] = "nolatex"
     # add a note with latex
     f = d.newNote()
-    f['Front'] = u"[latex]hello[/latex]"
+    f['Front'] = "[latex]hello[/latex]"
     d.addNote(f)
     # but since latex couldn't run, there's nothing there
     assert len(os.listdir(d.media.dir())) == 0
@@ -23,7 +23,7 @@ def test_latex():
     for cmd in ("latex", "dvipng"):
         if (not os.path.exists("/usr/bin/"+cmd) and
             not os.path.exists("/usr/texbin/"+cmd)):
-            print "aborting test; %s is not installed" % cmd
+            print("aborting test; %s is not installed" % cmd)
             return
     # fix path
     anki.latex.latexCmd[0] = "latex"
@@ -33,13 +33,13 @@ def test_latex():
     assert ".png" in f.cards()[0].q()
     # adding new notes should cause generation on question display
     f = d.newNote()
-    f['Front'] = u"[latex]world[/latex]"
+    f['Front'] = "[latex]world[/latex]"
     d.addNote(f)
     f.cards()[0].q()
     assert len(os.listdir(d.media.dir())) == 2
     # another note with the same media should reuse
     f = d.newNote()
-    f['Front'] = u" [latex]world[/latex]"
+    f['Front'] = " [latex]world[/latex]"
     d.addNote(f)
     assert len(os.listdir(d.media.dir())) == 2
     oldcard = f.cards()[0]
@@ -48,7 +48,7 @@ def test_latex():
     # missing media will show the latex
     anki.latex.build = False
     f = d.newNote()
-    f['Front'] = u"[latex]foo[/latex]"
+    f['Front'] = "[latex]foo[/latex]"
     d.addNote(f)
     assert len(os.listdir(d.media.dir())) == 2
     assert stripHTML(f.cards()[0].q()) == "[latex]foo[/latex]"

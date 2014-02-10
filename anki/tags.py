@@ -49,7 +49,7 @@ class TagManager(object):
             runHook("newTag")
 
     def all(self):
-        return self.tags.keys()
+        return list(self.tags.keys())
 
     def registerNotes(self, nids=None):
         "Add any missing tags from notes to the tags list."
@@ -64,7 +64,7 @@ class TagManager(object):
             " ".join(self.col.db.list("select distinct tags from notes"+lim)))))
 
     def allItems(self):
-        return self.tags.items()
+        return list(self.tags.items())
 
     def save(self):
         self.changed = True
@@ -116,8 +116,8 @@ class TagManager(object):
     def join(self, tags):
         "Join tags into a single string, with leading and trailing spaces."
         if not tags:
-            return u""
-        return u" %s " % u" ".join(tags)
+            return ""
+        return " %s " % " ".join(tags)
 
     def addToStr(self, addtags, tags):
         "Add tags if they don't exist, and canonify."
@@ -157,6 +157,6 @@ class TagManager(object):
     ##########################################################################
 
     def beforeUpload(self):
-        for k in self.tags.keys():
+        for k in list(self.tags.keys()):
             self.tags[k] = 0
         self.save()

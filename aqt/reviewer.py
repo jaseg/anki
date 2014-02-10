@@ -2,12 +2,12 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-from __future__ import division
+
 import difflib
 import re
 import cgi
 import unicodedata as ucd
-import HTMLParser
+import html.parser
 
 from anki.lang import _, ngettext
 from aqt.qt import *
@@ -17,6 +17,7 @@ from anki.sound import playFromText, clearAudioQueue, play
 from aqt.utils import mungeQA, getBase, openLink, tooltip, askUserDialog
 from aqt.sound import getAudio
 import aqt
+from aqt import ngettext, gettext as _
 
 
 class Reviewer(object):
@@ -277,7 +278,7 @@ The front of this card is empty. Please run Tools>Empty Cards.""")
         self.bottom.web.eval("py.link('ans');")
 
     def _keyHandler(self, evt):
-        key = unicode(evt.text())
+        key = str(evt.text())
         if key == "e":
             self.mw.onEditCurrent()
         elif (key == " " or evt.key() in (Qt.Key_Return, Qt.Key_Enter)):
@@ -401,12 +402,12 @@ Please run Tools>Empty Cards""")
         buf = buf.replace("<hr id=answer>", "")
         hadHR = len(buf) != origSize
         # munge correct value
-        parser = HTMLParser.HTMLParser()
+        parser = html.parser.HTMLParser()
         cor = stripHTML(self.mw.col.media.strip(self.typeCorrect))
         # ensure we don't chomp multiple whitespace
         cor = cor.replace(" ", "&nbsp;")
         cor = parser.unescape(cor)
-        cor = cor.replace(u"\xa0", " ")
+        cor = cor.replace("\xa0", " ")
         given = self.typedAnswer
         # compare with typed answer
         res = self.correct(given, cor, showBad=False)

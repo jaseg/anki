@@ -50,7 +50,7 @@ def _imgLink(col, latex, model):
     if os.path.exists(fname):
         return link
     elif not build:
-        return u"[latex]%s[/latex]" % latex
+        return "[latex]%s[/latex]" % latex
     else:
         err = _buildImg(col, txt, fname, model)
         if err:

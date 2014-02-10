@@ -6,6 +6,7 @@ from aqt.qt import *
 import time
 from anki.sound import Recorder
 from aqt.utils import saveGeom, restoreGeom
+from aqt import ngettext, gettext as _
 
 def getAudio(parent, encode=True):
     "Record and return filename"

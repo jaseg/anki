@@ -2,8 +2,9 @@
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
 from aqt.qt import *
-import re, os, sys, urllib, subprocess
+import re, os, sys, urllib.request, urllib.parse, urllib.error, subprocess
 import aqt
+from aqt import ngettext, gettext as _
 from anki.sound import stripSounds
 from anki.utils import isWin, isMac, invalidFilename
 
@@ -134,7 +135,7 @@ def askUserDialog(text, buttons, parent=None, help=""):
 
 class GetTextDialog(QDialog):
 
-    def __init__(self, parent, question, help=None, edit=None, default=u"",
+    def __init__(self, parent, question, help=None, edit=None, default="",
                  title="Anki"):
         QDialog.__init__(self, parent)
         self.setWindowTitle(title)
@@ -174,21 +175,21 @@ class GetTextDialog(QDialog):
     def helpRequested(self):
         openHelp(self.help)
 
-def getText(prompt, parent=None, help=None, edit=None, default=u"", title="Anki"):
+def getText(prompt, parent=None, help=None, edit=None, default="", title="Anki"):
     if not parent:
         parent = aqt.mw.app.activeWindow() or aqt.mw
     d = GetTextDialog(parent, prompt, help=help, edit=edit,
                       default=default, title=title)
     d.setWindowModality(Qt.WindowModal)
     ret = d.exec_()
-    return (unicode(d.l.text()), ret)
+    return (str(d.l.text()), ret)
 
 def getOnlyText(*args, **kwargs):
     (s, r) = getText(*args, **kwargs)
     if r:
         return s
     else:
-        return u""
+        return ""
 
 # fixme: these utilities could be combined into a single base class
 def chooseList(prompt, choices, startrow=0, parent=None):
@@ -241,7 +242,7 @@ def getFile(parent, title, cb, filter="*.*", dir=None, key=None):
     def accept():
         # work around an osx crash
         aqt.mw.app.processEvents()
-        file = unicode(list(d.selectedFiles())[0])
+        file = str(list(d.selectedFiles())[0])
         if dirkey:
             dir = os.path.dirname(file)
             aqt.mw.pm.profile[dirkey] = dir
@@ -258,8 +259,8 @@ def getSaveFile(parent, title, dir_description, key, ext, fname=None):
     config_key = dir_description + 'Directory'
     base = aqt.mw.pm.profile.get(config_key, aqt.mw.pm.base)
     path = os.path.join(base, fname)
-    file = unicode(QFileDialog.getSaveFileName(
-        parent, title, path, u"{0} (*{1})".format(key, ext),
+    file = str(QFileDialog.getSaveFileName(
+        parent, title, path, "{0} (*{1})".format(key, ext),
         options=QFileDialog.DontConfirmOverwrite))
     if file:
         # add extension
@@ -333,18 +334,18 @@ def getBase(col):
     base = None
     mdir = col.media.dir()
     if isWin and not mdir.startswith("\\\\"):
-        prefix = u"file:///"
+        prefix = "file:///"
     else:
-        prefix = u"file://"
+        prefix = "file://"
     mdir = mdir.replace("\\", "/")
-    base = prefix + unicode(
-        urllib.quote(mdir.encode("utf-8")),
+    base = prefix + str(
+        urllib.parse.quote(mdir.encode("utf-8")),
         "utf-8") + "/"
     return '<base href="%s">' % base
 
 def openFolder(path):
     if isWin:
-        if isinstance(path, unicode):
+        if isinstance(path, str):
             path = path.encode(sys.getfilesystemencoding())
         subprocess.Popen(["explorer", path])
     else:

@@ -4,7 +4,7 @@
 
 import os
 import unicodedata
-from anki import Collection
+from anki.storage import Collection
 from anki.utils import intTime, splitFields, joinFields, incGuid
 from anki.importing.base import Importer
 from anki.lang import _
@@ -389,7 +389,7 @@ insert or ignore into revlog values (?,?,?,?,?,?,?,?,?)""", revlog)
     ######################################################################
 
     def _postImport(self):
-        for did in self._decks.values():
+        for did in list(self._decks.values()):
             self.col.sched.maybeRandomizeDeck(did)
         # make sure new position is correct
         self.dst.conf['nextPos'] = self.dst.db.scalar(

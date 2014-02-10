@@ -3,7 +3,7 @@
 import datetime, shutil
 from anki import Collection
 from anki.consts import *
-from shared import getUpgradeDeckPath, testDir
+from .shared import getUpgradeDeckPath, testDir
 from anki.upgrade import Upgrader
 from anki.utils import  checksum
 

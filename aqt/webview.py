@@ -5,6 +5,7 @@
 import sys
 from anki.hooks import runHook
 from aqt.qt import *
+from aqt import ngettext, gettext as _
 from aqt.utils import openLink
 from anki.utils import isMac, isWin
 import anki.js
@@ -15,10 +16,10 @@ import anki.js
 class Bridge(QObject):
     @pyqtSlot(str, result=str)
     def run(self, str):
-        return unicode(self._bridge(unicode(str)))
+        return str(self._bridge(str(str)))
     @pyqtSlot(str)
     def link(self, str):
-        self._linkHandler(unicode(str))
+        self._linkHandler(str(str))
     def setBridge(self, func):
         self._bridge = func
     def setLinkHandler(self, func):

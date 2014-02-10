@@ -4,11 +4,11 @@
 
 import os
 import re
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import unicodedata
 import sys
 import zipfile
-from cStringIO import StringIO
+from io import StringIO
 
 import send2trash
 from anki.utils import checksum, isWin, isMac, json
@@ -37,7 +37,7 @@ class MediaManager(object):
         self._dir = re.sub("(?i)\.(anki2)$", ".media", self.col.path)
         # convert dir to unicode if it's not already
         if isinstance(self._dir, str):
-            self._dir = unicode(self._dir, sys.getfilesystemencoding())
+            self._dir = str(self._dir, sys.getfilesystemencoding())
         if not os.path.exists(self._dir):
             os.makedirs(self._dir)
         try:
@@ -188,7 +188,7 @@ class MediaManager(object):
             if re.match("(https?|ftp)://", fname):
                 return tag
             return tag.replace(
-                fname, urllib.quote(fname.encode("utf-8")))
+                fname, urllib.parse.quote(fname.encode("utf-8")))
         for reg in self.imgRegexps:
             string = re.sub(reg, repl, string)
         return string
@@ -303,8 +303,8 @@ class MediaManager(object):
                 data = z.read(i)
                 csum = checksum(data)
                 name = meta[i.filename]
-                if not isinstance(name, unicode):
-                    name = unicode(name, "utf8")
+                if not isinstance(name, str):
+                    name = str(name, "utf8")
                 # normalize name for platform
                 if isMac:
                     name = unicodedata.normalize("NFD", name)
@@ -477,7 +477,7 @@ create table log (fname text primary key, type int);
                 # mark as used
                 self.cache[f][2] = True
         # look for any entries in the cache that no longer exist on disk
-        for (k, v) in self.cache.items():
+        for (k, v) in list(self.cache.items()):
             if not v[2]:
                 removed.append(k)
         return added, removed

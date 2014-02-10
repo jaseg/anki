@@ -6,6 +6,7 @@ from aqt.qt import *
 from anki.hooks import addHook, remHook, runHook
 from aqt.utils import  shortcut
 import aqt
+from aqt import ngettext, gettext as _
 
 class ModelChooser(QHBoxLayout):
 

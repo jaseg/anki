@@ -6,6 +6,7 @@ import datetime, time
 from aqt.qt import *
 from aqt.utils import openFolder, showWarning, getText, openHelp, showInfo
 import aqt
+from aqt import ngettext, gettext as _
 
 class Preferences(QDialog):
 
@@ -51,7 +52,7 @@ class Preferences(QDialog):
         f.timeLimit.setValue(qc['timeLim']/60.0)
         f.showEstimates.setChecked(qc['estTimes'])
         f.showProgress.setChecked(qc['dueCounts'])
-        f.newSpread.addItems(c.newCardSchedulingLabels().values())
+        f.newSpread.addItems(list(c.newCardSchedulingLabels().values()))
         f.newSpread.setCurrentIndex(qc['newSpread'])
         f.useCurrent.setCurrentIndex(int(not qc.get("addToCur", True)))
 

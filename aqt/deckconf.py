@@ -6,6 +6,7 @@ from operator import itemgetter
 from anki.consts import NEW_CARDS_RANDOM
 from aqt.qt import *
 import aqt
+from aqt import ngettext, gettext as _
 from aqt.utils import showInfo, showWarning, openHelp, getOnlyText, askUser, \
     tooltip
 
@@ -27,7 +28,7 @@ class DeckConf(QDialog):
                      SIGNAL("helpRequested()"),
                      lambda: openHelp("deckoptions"))
         self.connect(self.form.confOpts, SIGNAL("clicked()"), self.confOpts)
-        self.form.confOpts.setText(u"▾")
+        self.form.confOpts.setText("▾")
         self.connect(self.form.buttonBox.button(QDialogButtonBox.RestoreDefaults),
                      SIGNAL("clicked()"),
                      self.onRestore)
@@ -40,7 +41,7 @@ class DeckConf(QDialog):
     def setupCombos(self):
         import anki.consts as cs
         f = self.form
-        f.newOrder.addItems(cs.newCardOrderLabels().values())
+        f.newOrder.addItems(list(cs.newCardOrderLabels().values()))
         self.connect(f.newOrder, SIGNAL("currentIndexChanged(int)"),
                      self.onNewOrderChanged)
 
@@ -228,7 +229,7 @@ class DeckConf(QDialog):
     ##################################################
 
     def updateList(self, conf, key, w, minSize=1):
-        items = unicode(w.text()).split(" ")
+        items = str(w.text()).split(" ")
         ret = []
         for i in items:
             if not i:

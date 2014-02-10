@@ -25,7 +25,7 @@ def test_new():
     assert d.sched.newCount == 0
     # add a note
     f = d.newNote()
-    f['Front'] = u"one"; f['Back'] = u"two"
+    f['Front'] = "one"; f['Back'] = "two"
     d.addNote(f)
     d.reset()
     assert d.sched.newCount == 1
@@ -49,10 +49,10 @@ def test_new():
     mm.addTemplate(m, t)
     mm.save(m)
     f = d.newNote()
-    f['Front'] = u"2"; f['Back'] = u"2"
+    f['Front'] = "2"; f['Back'] = "2"
     d.addNote(f)
     f = d.newNote()
-    f['Front'] = u"3"; f['Back'] = u"3"
+    f['Front'] = "3"; f['Back'] = "3"
     d.addNote(f)
     d.reset()
     qs = ("2", "3", "2", "3")
@@ -94,7 +94,7 @@ def test_newLimits():
 def test_newBoxes():
     d = getEmptyDeck()
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     d.reset()
     c = d.sched.getCard()
@@ -108,7 +108,7 @@ def test_learn():
     d = getEmptyDeck()
     # add a note
     f = d.newNote()
-    f['Front'] = u"one"; f['Back'] = u"two"
+    f['Front'] = "one"; f['Back'] = "two"
     f = d.addNote(f)
     # set as a learn card and rebuild queues
     d.db.execute("update cards set queue=0, type=0")
@@ -182,10 +182,10 @@ def test_learn_collapsed():
     d = getEmptyDeck()
     # add 2 notes
     f = d.newNote()
-    f['Front'] = u"1"
+    f['Front'] = "1"
     f = d.addNote(f)
     f = d.newNote()
-    f['Front'] = u"2"
+    f['Front'] = "2"
     f = d.addNote(f)
     # set as a learn card and rebuild queues
     d.db.execute("update cards set queue=0, type=0")
@@ -208,7 +208,7 @@ def test_learn_day():
     d = getEmptyDeck()
     # add a note
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     f = d.addNote(f)
     d.sched.reset()
     c = d.sched.getCard()
@@ -266,7 +266,7 @@ def test_reviews():
     d = getEmptyDeck()
     # add a note
     f = d.newNote()
-    f['Front'] = u"one"; f['Back'] = u"two"
+    f['Front'] = "one"; f['Back'] = "two"
     d.addNote(f)
     # set the card up as a review card, due 8 days ago
     c = f.cards()[0]
@@ -357,7 +357,7 @@ def test_reviews():
 def test_button_spacing():
     d = getEmptyDeck()
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     # 1 day ivl review card due now
     c = f.cards()[0]
@@ -380,7 +380,7 @@ def test_overdue_lapse():
     d = getEmptyDeck()
     # add a note
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     # simulate a review that was lapsed and is now due for its normal review
     c = f.cards()[0]
@@ -415,7 +415,7 @@ def test_finished():
     assert "Congratulations" in d.sched.finishedMsg()
     assert "limit" not in d.sched.finishedMsg()
     f = d.newNote()
-    f['Front'] = u"one"; f['Back'] = u"two"
+    f['Front'] = "one"; f['Back'] = "two"
     d.addNote(f)
     # have a new card
     assert "new cards available" in d.sched.finishedMsg()
@@ -431,7 +431,7 @@ def test_finished():
 def test_nextIvl():
     d = getEmptyDeck()
     f = d.newNote()
-    f['Front'] = u"one"; f['Back'] = u"two"
+    f['Front'] = "one"; f['Back'] = "two"
     d.addNote(f)
     d.reset()
     conf = d.decks.confForDid(1)
@@ -487,7 +487,7 @@ def test_nextIvl():
 def test_misc():
     d = getEmptyDeck()
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     c = f.cards()[0]
     # burying
@@ -501,7 +501,7 @@ def test_misc():
 def test_suspend():
     d = getEmptyDeck()
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     c = f.cards()[0]
     # suspending
@@ -544,7 +544,7 @@ def test_suspend():
 def test_cram():
     d = getEmptyDeck()
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     c = f.cards()[0]
     c.ivl = 100
@@ -652,7 +652,7 @@ def test_cram():
 def test_cram_rem():
     d = getEmptyDeck()
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     oldDue = f.cards()[0].due
     did = d.decks.newDyn("Cram")
@@ -673,7 +673,7 @@ def test_cram_resched():
     # add card
     d = getEmptyDeck()
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     # cram deck
     did = d.decks.newDyn("Cram")
@@ -801,7 +801,7 @@ def test_ordcycle():
 def test_counts_idx():
     d = getEmptyDeck()
     f = d.newNote()
-    f['Front'] = u"one"; f['Back'] = u"two"
+    f['Front'] = "one"; f['Back'] = "two"
     d.addNote(f)
     d.reset()
     assert d.sched.counts() == (1, 0, 0)
@@ -823,7 +823,7 @@ def test_counts_idx():
 def test_repCounts():
     d = getEmptyDeck()
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     d.reset()
     # lrnReps should be accurate on pass/fail
@@ -841,7 +841,7 @@ def test_repCounts():
     d.sched.answerCard(d.sched.getCard(), 2)
     assert d.sched.counts() == (0, 0, 0)
     f = d.newNote()
-    f['Front'] = u"two"
+    f['Front'] = "two"
     d.addNote(f)
     d.reset()
     # initial pass should be correct too
@@ -853,14 +853,14 @@ def test_repCounts():
     assert d.sched.counts() == (0, 0, 0)
     # immediate graduate should work
     f = d.newNote()
-    f['Front'] = u"three"
+    f['Front'] = "three"
     d.addNote(f)
     d.reset()
     d.sched.answerCard(d.sched.getCard(), 3)
     assert d.sched.counts() == (0, 0, 0)
     # and failing a review should too
     f = d.newNote()
-    f['Front'] = u"three"
+    f['Front'] = "three"
     d.addNote(f)
     c = f.cards()[0]
     c.type = 2
@@ -902,7 +902,7 @@ def test_collapse():
     d = getEmptyDeck()
     # add a note
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     d.reset()
     # test collapsing
@@ -916,11 +916,11 @@ def test_deckDue():
     d = getEmptyDeck()
     # add a note with default deck
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     # and one that's a child
     f = d.newNote()
-    f['Front'] = u"two"
+    f['Front'] = "two"
     default1 = f.model()['did'] = d.decks.id("Default::1")
     d.addNote(f)
     # make it a review card
@@ -930,12 +930,12 @@ def test_deckDue():
     c.flush()
     # add one more with a new deck
     f = d.newNote()
-    f['Front'] = u"two"
+    f['Front'] = "two"
     foobar = f.model()['did'] = d.decks.id("foo::bar")
     d.addNote(f)
     # and one that's a sibling
     f = d.newNote()
-    f['Front'] = u"three"
+    f['Front'] = "three"
     foobaz = f.model()['did'] = d.decks.id("foo::baz")
     d.addNote(f)
     d.reset()
@@ -975,16 +975,16 @@ def test_deckFlow():
     d = getEmptyDeck()
     # add a note with default deck
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     # and one that's a child
     f = d.newNote()
-    f['Front'] = u"two"
+    f['Front'] = "two"
     default1 = f.model()['did'] = d.decks.id("Default::2")
     d.addNote(f)
     # and another that's higher up
     f = d.newNote()
-    f['Front'] = u"three"
+    f['Front'] = "three"
     default1 = f.model()['did'] = d.decks.id("Default::1")
     d.addNote(f)
     # should get top level one first, then ::1, then ::2
@@ -999,10 +999,10 @@ def test_reorder():
     d = getEmptyDeck()
     # add a note with default deck
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     f2 = d.newNote()
-    f2['Front'] = u"two"
+    f2['Front'] = "two"
     d.addNote(f2)
     assert f2.cards()[0].due == 2
     found=False
@@ -1017,10 +1017,10 @@ def test_reorder():
     assert f.cards()[0].due == 1
     # shifting
     f3 = d.newNote()
-    f3['Front'] = u"three"
+    f3['Front'] = "three"
     d.addNote(f3)
     f4 = d.newNote()
-    f4['Front'] = u"four"
+    f4['Front'] = "four"
     d.addNote(f4)
     assert f.cards()[0].due == 1
     assert f2.cards()[0].due == 2
@@ -1036,7 +1036,7 @@ def test_reorder():
 def test_forget():
     d = getEmptyDeck()
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     c = f.cards()[0]
     c.queue = 2; c.type = 2; c.ivl = 100; c.due = 0
@@ -1050,7 +1050,7 @@ def test_forget():
 def test_resched():
     d = getEmptyDeck()
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     c = f.cards()[0]
     d.sched.reschedCards([c.id], 0, 0)
@@ -1067,7 +1067,7 @@ def test_norelearn():
     d = getEmptyDeck()
     # add a note
     f = d.newNote()
-    f['Front'] = u"one"
+    f['Front'] = "one"
     d.addNote(f)
     c = f.cards()[0]
     c.type = 2
@@ -1087,7 +1087,7 @@ def test_norelearn():
 def test_failmult():
     d = getEmptyDeck()
     f = d.newNote()
-    f['Front'] = u"one"; f['Back'] = u"two"
+    f['Front'] = "one"; f['Back'] = "two"
     d.addNote(f)
     c = f.cards()[0]
     c.type = 2

@@ -4,6 +4,7 @@
 
 import time
 from aqt.qt import *
+from aqt import ngettext, gettext as _
 
 # fixme: if mw->subwindow opens a progress dialog with mw as the parent, mw
 # gets raised on finish on compiz. perhaps we should be using the progress
@@ -32,8 +33,8 @@ class ProgressManager(object):
         try:
             db.set_progress_handler(self._dbProgress, 10000)
         except:
-            print """\
-Your pysqlite2 is too old. Anki will appear frozen during long operations."""
+            print("""\
+Your pysqlite2 is too old. Anki will appear frozen during long operations.""")
 
     def _dbProgress(self):
         "Called from SQLite."

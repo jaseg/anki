@@ -1,7 +1,7 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-from __future__ import division
+
 import socket
 import time
 import traceback
@@ -9,7 +9,8 @@ import gc
 
 from aqt.qt import *
 import aqt
-from anki import Collection
+from aqt import ngettext, gettext as _
+from anki.storage import Collection
 from anki.sync import Syncer, RemoteServer, FullSyncer, MediaSyncer, \
     RemoteMediaServer
 from anki.hooks import addHook, remHook
@@ -118,8 +119,7 @@ Please visit AnkiWeb, upgrade your deck, then try again."""))
                 self._updateLabel()
         elif evt == "error":
             self._didError = True
-            showText(_("Syncing failed:\n%s")%
-                     self._rewriteError(args[0]))
+            showText(_("Syncing failed:\n%s")% self._rewriteError(args[0]))
         elif evt == "clockOff":
             self._clockOff()
         elif evt == "checkFailed":
@@ -312,8 +312,8 @@ class SyncThread(QThread):
             self._sync()
         except:
             err = traceback.format_exc()
-            if not isinstance(err, unicode):
-                err = unicode(err, "utf8", "replace")
+            if not isinstance(err, str):
+                err = str(err, "utf8", "replace")
             self.fireEvent("error", err)
         finally:
             # don't bump mod time unless we explicitly save
@@ -335,10 +335,10 @@ class SyncThread(QThread):
         # run sync and check state
         try:
             ret = self.client.sync()
-        except Exception, e:
+        except Exception as e:
             log = traceback.format_exc()
             try:
-                err = unicode(e[0], "utf8", "ignore")
+                err = str(e[0], "utf8", "ignore")
             except:
                 # number, exception with no args, etc
                 err = ""
@@ -347,8 +347,8 @@ class SyncThread(QThread):
             else:
                 if not err:
                     err = log
-                if not isinstance(err, unicode):
-                    err = unicode(err, "utf8", "replace")
+                if not isinstance(err, str):
+                    err = str(err, "utf8", "replace")
                 self.fireEvent("error", err)
             return
         if ret == "badAuth":
@@ -416,86 +416,7 @@ class SyncThread(QThread):
     def fireEvent(self, *args):
         self.emit(SIGNAL("event"), *args)
 
-
 # Monkey-patch httplib & httplib2 so we can get progress info
-######################################################################
+#FIXME runHook("httpSend", len(block))
+#FIXME runHook("httpRecv", len(data))
 
-CHUNK_SIZE = 65536
-import httplib, httplib2, errno
-from cStringIO import StringIO
-from anki.hooks import runHook
-
-# sending in httplib
-def _incrementalSend(self, data):
-    """Send `data' to the server."""
-    if self.sock is None:
-        if self.auto_open:
-            self.connect()
-        else:
-            raise httplib.NotConnected()
-    # if it's not a file object, make it one
-    if not hasattr(data, 'read'):
-        if isinstance(data, unicode):
-            data = data.encode("utf8")
-        data = StringIO(data)
-    while 1:
-        block = data.read(CHUNK_SIZE)
-        if not block:
-            break
-        self.sock.sendall(block)
-        runHook("httpSend", len(block))
-
-httplib.HTTPConnection.send = _incrementalSend
-
-# receiving in httplib2
-def _conn_request(self, conn, request_uri, method, body, headers):
-    try:
-        if conn.sock is None:
-          conn.connect()
-        conn.request(method, request_uri, body, headers)
-    except socket.timeout:
-        raise
-    except socket.gaierror:
-        conn.close()
-        raise httplib2.ServerNotFoundError(
-            "Unable to find the server at %s" % conn.host)
-    except httplib2.ssl_SSLError:
-        conn.close()
-        raise
-    except socket.error, e:
-        err = 0
-        if hasattr(e, 'args'):
-            err = getattr(e, 'args')[0]
-        else:
-            err = e.errno
-        if err == errno.ECONNREFUSED: # Connection refused
-            raise
-    except httplib.HTTPException:
-        # Just because the server closed the connection doesn't apparently mean
-        # that the server didn't send a response.
-        if conn.sock is None:
-            conn.close()
-            raise
-    try:
-        response = conn.getresponse()
-    except (socket.error, httplib.HTTPException):
-        raise
-    else:
-        content = ""
-        if method == "HEAD":
-            response.close()
-        else:
-            buf = StringIO()
-            while 1:
-                data = response.read(CHUNK_SIZE)
-                if not data:
-                    break
-                buf.write(data)
-                runHook("httpRecv", len(data))
-            content = buf.getvalue()
-        response = httplib2.Response(response)
-        if method != "HEAD":
-            content = httplib2._decompressContent(response, content)
-    return (response, content)
-
-httplib2.Http._conn_request = _conn_request

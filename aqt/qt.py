@@ -3,16 +3,8 @@
 
 # imports are all in this file to make moving to pyside easier in the future
 
-import sip, os
+import os
 from anki.utils import isWin, isMac
-sip.setapi('QString', 2)
-sip.setapi('QVariant', 2)
-sip.setapi('QUrl', 2)
-try:
-    sip.setdestroyonexit(False)
-except:
-    # missing in older versions
-    pass
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from PyQt4.QtWebKit import QWebPage, QWebView, QWebSettings

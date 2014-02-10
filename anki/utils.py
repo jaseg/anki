@@ -2,13 +2,13 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-from __future__ import division
+
 import re
 import os
 import random
 import time
 import math
-import htmlentitydefs
+import html.entities
 import subprocess
 import tempfile
 import shutil
@@ -32,8 +32,8 @@ try:
     # we don't try to support .load()
     origLoads = json.loads
     def loads(s, *args, **kwargs):
-        if not isinstance(s, unicode):
-            s = unicode(s, "utf8")
+        if not isinstance(s, str):
+            s = str(s, "utf8")
         return origLoads(s, *args, **kwargs)
     json.loads = loads
 except ImportError:
@@ -181,15 +181,15 @@ def entsToTxt(html):
             # character reference
             try:
                 if text[:3] == "&#x":
-                    return unichr(int(text[3:-1], 16))
+                    return chr(int(text[3:-1], 16))
                 else:
-                    return unichr(int(text[2:-1]))
+                    return chr(int(text[2:-1]))
             except ValueError:
                 pass
         else:
             # named entity
             try:
-                text = unichr(htmlentitydefs.name2codepoint[text[1:-1]])
+                text = chr(html.entities.name2codepoint[text[1:-1]])
             except KeyError:
                 pass
         return text # leave as is
@@ -270,7 +270,7 @@ def splitFields(string):
 ##############################################################################
 
 def checksum(data):
-    if isinstance(data, unicode):
+    if isinstance(data, str):
         data = data.encode("utf-8")
     return sha1(data).hexdigest()
 
@@ -291,7 +291,7 @@ def tmpdir():
             shutil.rmtree(_tmpdir)
         import atexit
         atexit.register(cleanup)
-        _tmpdir = unicode(os.path.join(tempfile.gettempdir(), "anki_temp"), sys.getfilesystemencoding())
+        _tmpdir = str(os.path.join(tempfile.gettempdir(), "anki_temp"), sys.getfilesystemencoding())
         if not os.path.exists(_tmpdir):
             os.mkdir(_tmpdir)
     return _tmpdir

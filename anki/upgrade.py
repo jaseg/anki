@@ -559,7 +559,7 @@ order by ordinal""", mid)):
                 while 1:
                     state['fields'] += 1
                     fld = "Media %d" % state['fields']
-                    if fld not in col.models.fieldMap(m).keys():
+                    if fld not in list(col.models.fieldMap(m).keys()):
                         break
                 # add the new field
                 f = col.models.newField(fld)
@@ -672,7 +672,7 @@ and ord = ? limit 1""", m['id'], t['ord']):
         "Handle the rest of the upgrade to 2.0."
         col = self.col
         # make sure we have a current model id
-        col.models.setCurrent(col.models.models.values()[0])
+        col.models.setCurrent(list(col.models.models.values())[0])
         # remove unused templates that were marked inactive
         self._removeInactive()
         # rewrite media references in card template

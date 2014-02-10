@@ -7,13 +7,14 @@
 # - Saves in sqlite rather than a flat file so the config can't be corrupted
 
 from aqt.qt import *
-import os, random, cPickle, shutil, locale, re
+from aqt import ngettext, gettext as _
+import os, random, pickle, shutil, locale, re
 from anki.db import DB
 from anki.utils import isMac, isWin, intTime, checksum
 from anki.lang import langs
 from aqt.utils import showWarning
-from aqt import appHelpSite
-import aqt.forms
+from aqt import ANKI_WEBSITE
+from aqt.forms import setlang
 from send2trash import send2trash
 
 metaConf = dict(
@@ -90,15 +91,12 @@ documentation for information on using a flash drive.""")
     ######################################################################
 
     def profiles(self):
-        return sorted(
-            unicode(x, "utf8") for x in
-            self.db.list("select name from profiles")
-            if x != "_global")
+        return sorted(x for x in self.db.list("select name from profiles") if x != "_global")
 
     def load(self, name, passwd=None):
-        prof = cPickle.loads(
+        prof = pickle.loads(
             self.db.scalar("select data from profiles where name = ?",
-                           name.encode("utf8")))
+                           name))
         if prof['key'] and prof['key'] != self._pwhash(passwd):
             self.name = None
             return False
@@ -109,15 +107,15 @@ documentation for information on using a flash drive.""")
 
     def save(self):
         sql = "update profiles set data = ? where name = ?"
-        self.db.execute(sql, cPickle.dumps(self.profile),
-                        self.name.encode("utf8"))
-        self.db.execute(sql, cPickle.dumps(self.meta), "_global")
+        self.db.execute(sql, pickle.dumps(self.profile),
+                        self.name)
+        self.db.execute(sql, pickle.dumps(self.meta), "_global")
         self.db.commit()
 
     def create(self, name):
         prof = profileConf.copy()
         self.db.execute("insert into profiles values (?, ?)",
-                        name.encode("utf8"), cPickle.dumps(prof))
+                        name, pickle.dumps(prof))
         self.db.commit()
 
     def remove(self, name):
@@ -125,7 +123,7 @@ documentation for information on using a flash drive.""")
         if os.path.exists(p):
             send2trash(p)
         self.db.execute("delete from profiles where name = ?",
-                        name.encode("utf8"))
+                        name)
         self.db.commit()
 
     def rename(self, name):
@@ -139,7 +137,7 @@ documentation for information on using a flash drive.""")
             return
         # update name
         self.db.execute("update profiles set name = ? where name = ?",
-                        name.encode("utf8"), oldName.encode("utf-8"))
+                        name, oldName)
         # rename folder
         os.rename(oldFolder, newFolder)
         self.db.commit()
@@ -189,7 +187,7 @@ documentation for information on using a flash drive.""")
     def _loadMeta(self):
         path = os.path.join(self.base, "prefs.db")
         new = not os.path.exists(path)
-        self.db = DB(path, text=str)
+        self.db = DB(path)
         def recover():
             # if we can't load profile, start with a new one
             os.rename(path, path+".broken")
@@ -207,17 +205,16 @@ create table if not exists profiles
         if not new:
             # load previously created
             try:
-                self.meta = cPickle.loads(
-                    self.db.scalar(
-                        "select data from profiles where name = '_global'"))
-                return
+                self.meta = pickle.loads(
+                    self.db.scalar("select data from profiles where name = '_global'"))
+                return False
             except:
                 recover()
                 return self._loadMeta()
         # create a default global profile
         self.meta = metaConf.copy()
         self.db.execute("insert or replace into profiles values ('_global', ?)",
-                        cPickle.dumps(metaConf))
+                        pickle.dumps(metaConf))
         self._setDefaultLang()
         return True
 
@@ -226,16 +223,16 @@ create table if not exists profiles
         if self.firstRun:
             self.create(_("User 1"))
             p = os.path.join(self.base, "README.txt")
-            open(p, "w").write((_("""\
+            open(p, "w").write(_("""\
 This folder stores all of your Anki data in a single location,
 to make backups easy. To tell Anki to use a different location,
 please see:
 
 %s
-""") % (appHelpSite +  "#startupopts")).encode("utf8"))
+""") % (ANKI_WEBSITE +  "#startupopts"))
 
     def _pwhash(self, passwd):
-        return checksum(unicode(self.meta['id'])+unicode(passwd))
+        return checksum(str(self.meta['id'])+str(passwd))
 
     # Default language
     ######################################################################
@@ -244,14 +241,14 @@ please see:
     def _setDefaultLang(self):
         # the dialog expects _ to be defined, but we're running before
         # setupLang() has been called. so we create a dummy op for now
-        import __builtin__
-        __builtin__.__dict__['_'] = lambda x: x
+        import builtins
+        builtins.__dict__['_'] = lambda x: x
         # create dialog
         class NoCloseDiag(QDialog):
             def reject(self):
                 pass
         d = self.langDiag = NoCloseDiag()
-        f = self.langForm = aqt.forms.setlang.Ui_Dialog()
+        f = self.langForm = setlang.Ui_Dialog()
         f.setupUi(d)
         d.connect(d, SIGNAL("accepted()"), self._onLangSelected)
         d.connect(d, SIGNAL("rejected()"), lambda: True)
@@ -284,5 +281,5 @@ please see:
         code = langs[f.lang.currentRow()][1]
         self.meta['defaultLang'] = code
         sql = "update profiles set data = ? where name = ?"
-        self.db.execute(sql, cPickle.dumps(self.meta), "_global")
+        self.db.execute(sql, pickle.dumps(self.meta), "_global")
         self.db.commit()

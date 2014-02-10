@@ -4,6 +4,7 @@
 
 from aqt.qt import *
 import aqt
+from aqt import ngettext, gettext as _
 from aqt.utils import showInfo, openHelp, getOnlyText, shortcut, restoreGeom, saveGeom
 from anki.hooks import addHook, remHook
 

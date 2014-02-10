@@ -3,6 +3,7 @@
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 from anki.lang import _
 
+from aqt import ngettext, gettext as _
 from aqt.qt import *
 import aqt.forms
 from aqt.utils import saveGeom, restoreGeom, showWarning, askUser, shortcut, \
@@ -69,7 +70,7 @@ class AddCards(QDialog):
         self.connect(self.helpButton, SIGNAL("clicked()"), self.helpRequested)
         # history
         b = bb.addButton(
-            _("History")+ u" ▾", ar)
+            _("History")+ " ▾", ar)
         if isMac:
             sc = "Ctrl+Shift+H"
         else:

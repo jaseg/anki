@@ -11,11 +11,15 @@ import  zipfile
 
 from send2trash import send2trash
 from aqt.qt import *
-from anki import Collection
+from aqt import ngettext, gettext as _
+from anki.storage import Collection
 from anki.utils import  isWin, isMac, intTime, splitFields, ids2str
 
 from anki.hooks import runHook, addHook
 import aqt
+import aqt.forms.main
+import aqt.forms.debug
+import aqt.forms.profiles
 import aqt.progress
 import aqt.webview
 import aqt.toolbar
@@ -58,14 +62,14 @@ class AnkiQt(QMainWindow):
             self.setupAddons()
         except:
             showInfo(_("Error during startup:\n%s") % traceback.format_exc())
-            sys.exit(1)
+            print(traceback.format_exc())
         # must call this after ui set up
         if self.safeMode:
             tooltip(_("Shift key was held down. Skipping automatic "
                     "syncing and add-on loading."))
         # were we given a file to import?
         if args and args[0]:
-            self.onAppMsg(unicode(args[0], sys.getfilesystemencoding(), "ignore"))
+            self.onAppMsg(str(args[0], sys.getfilesystemencoding(), "ignore"))
         # Load profile in a timer so we can let the window finish init and not
         # close on profile load error.
         self.progress.timer(10, self.setupProfile, False)
@@ -278,7 +282,7 @@ Your collection is corrupt. Please see the manual for \
 how to restore from a backup.""")
             self.unloadProfile()
             raise
-        except Exception, e:
+        except Exception as e:
             # the custom exception handler won't catch this if we immediately
             # unload, so we have to manually handle it
             if "invalidTempFolder" in repr(str(e)):
@@ -623,7 +627,7 @@ title="%s">%s</button>''' % (
         # run standard handler
         QMainWindow.keyPressEvent(self, evt)
         # check global keys
-        key = unicode(evt.text())
+        key = str(evt.text())
         if key == "d":
             self.moveToState("deckBrowser")
         elif key == "s":
@@ -746,9 +750,6 @@ title="%s">%s</button>''' % (
 
     def handleImport(self, path):
         import aqt.importing
-        if not os.path.exists(path):
-            return showInfo(_("Please use File>Import to import this file."))
-
         aqt.importing.importFile(self, path)
 
     def onImport(self):
@@ -1046,7 +1047,7 @@ will be lost. Continue?"""))
         pp = pprint.pprint
         self._captureOutput(True)
         try:
-            exec text
+            exec(text)
         except:
             self._output += traceback.format_exc()
         self._captureOutput(False)
@@ -1095,7 +1096,7 @@ will be lost. Continue?"""))
             return
         tgt = tgt or self
         for action in tgt.findChildren(QAction):
-            txt = unicode(action.text())
+            txt = str(action.text())
             m = re.match("^(.+)\(&.+\)(.+)?", txt)
             if m:
                 action.setText(m.group(1) + (m.group(2) or ""))
@@ -1142,8 +1143,6 @@ Please ensure a profile is open and Anki is not busy, then try again."""),
             self.raise_()
         if buf == "raise":
             return
-        # import
-        if not isinstance(buf, unicode):
-            buf = unicode(buf, "utf8", "ignore")
-
-        self.handleImport(buf)
+        if buf.startswith("open "):
+            # import
+            self.handleImport(buf[5:])
